@@ -10,6 +10,7 @@ contract Owned {
   }
 }
 
+// exercise 10.5
 contract Mortal is Owned{
   function kill() public onlyOwner {
     selfdestruct(owner);
@@ -30,21 +31,15 @@ contract CircuitBreaker is Owned {
 
 contract TimeLimited {
   uint public deadline; // UnixTime
-  string public onGoingStatus;
-  string public closedStatus;
-
   bool private _onGoing;
-  string private _status;
+  mapping (bool => string) private _status;
 
   function TimeLimited(uint _duration, string _onGoingStatus, string _closedStatus) public {
     deadline = now + _duration;
-    onGoingStatus = _onGoingStatus;
-    closedStatus = _closedStatus;
     _onGoing = true;
-    _status = onGoingStatus;
+    _status[true] = _onGoingStatus;
+    _status[false] = _closedStatus;
   }
-
-  event currentStatus(bool _onGoing, string _status);
 
   modifier onGoing() {
     checkDeadline(); require(_onGoing); _;
@@ -53,14 +48,16 @@ contract TimeLimited {
     checkDeadline(); require(!_onGoing); _;
   }
 
+  event status(string _status);
+
   // for checking status properties
-  function checkDeadline() internal {
-    if(now >= deadline) {
-      _onGoing = false; _status = closedStatus;
-    }
+  function checkDeadline() private {
+    if(now >= deadline) { _onGoing = false; }
   }
-  function checkStatus() public {
-    checkDeadline(); emit currentStatus(_onGoing, _status);
+  function checkStatus() public returns(string) {
+    checkDeadline();
+    emit status(_status[_onGoing]);
+    return _status[_onGoing];
   }
 }
 
@@ -103,16 +100,13 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
 
   // onlyOwner
 
-  function close() public onlyOwner timeout isStopped {
-    if(!msg.sender.send(highestBidder.amount)){revert();}
-
-    // for other bidders
+  function close() public payable onlyOwner timeout isStopped {
     uint i = 1; while(i <= numBidders) {
       refund(bidders[i]); i++;
     }
   }
 
-  function refund(Bidder _bidder) private onlyOwner timeout isStopped {
+  function refund(Bidder _bidder) public payable onlyOwner timeout isStopped {
     require(_bidder.amount > 0); // having refund amount
 
     // keep refund amount
