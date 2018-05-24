@@ -40,17 +40,15 @@ contract TimeLimited {
     deadline = now + _duration;
     onGoingStatus = _onGoingStatus;
     closedStatus = _closedStatus;
+    _status = _onGoingStatus;
     _onGoing = true;
-    _status = onGoingStatus;
   }
-
-  event currentStatus(bool _onGoing, string _status);
 
   modifier onGoing() {
-    checkDeadline(); require(_onGoing); _;
+    require(now < deadline); _;
   }
   modifier timeout() {
-    checkDeadline(); require(!_onGoing); _;
+    require(now >= deadline); _;
   }
 
   // for checking status properties
@@ -59,21 +57,26 @@ contract TimeLimited {
       _onGoing = false; _status = closedStatus;
     }
   }
-  function checkStatus() public {
-    checkDeadline(); emit currentStatus(_onGoing, _status);
+  function checkOnGoing() public {
+    checkDeadline(); _onGoing;
   }
+  function status() public {
+    checkDeadline(); _status;
+  }
+
 }
 
 
 contract Auction is Mortal, CircuitBreaker, TimeLimited {
 
-  // exercise 10.5
-  // keep bidder info for refunding
+  // keep bidder info for withdrawing
   struct Bidder {
     address addr;
     uint amount;
   }
+
   Bidder public highestBidder;
+
   uint public numBidders;
   mapping (uint => Bidder) public bidders;
 
@@ -82,7 +85,7 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
     highestBidder.addr = msg.sender;
     highestBidder.amount = 0;
 
-    // exercise 10.5
+    // exercise 10.5: additional property
     owner = msg.sender;
     numBidders = 0;
   }
@@ -103,16 +106,19 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
 
   // onlyOwner
 
-  function close() public onlyOwner timeout isStopped {
+  function close() public onlyOwner timeout {
     if(!msg.sender.send(highestBidder.amount)){revert();}
 
     // for other bidders
     uint i = 1; while(i <= numBidders) {
       refund(bidders[i]); i++;
     }
+
+    // Update auction status
+    checkDeadline();
   }
 
-  function refund(Bidder _bidder) private onlyOwner timeout isStopped {
+  function refund(Bidder _bidder) private onlyOwner timeout {
     require(_bidder.amount > 0); // having refund amount
 
     // keep refund amount
