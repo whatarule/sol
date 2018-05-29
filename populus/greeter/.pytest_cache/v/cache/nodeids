@@ -1,0 +1,4 @@
+[
+  "tests/test_greeter.py::test_greeter",
+  "tests/test_greeter.py::test_custom_greeting"
+]

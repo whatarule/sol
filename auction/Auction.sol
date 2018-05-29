@@ -101,12 +101,22 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
   // onlyOwner
 
   function close() public payable onlyOwner timeout isStopped {
+    // for bidders
     uint i = 1; while(i <= numBidders) {
-      refund(bidders[i]); i++;
+      _refund(bidders[i]); i++;
+      // refund(bidders[i].addr, bidders[i].amount); i++;
     }
+    //for owner
+    if(!owner.send(highestBidder.amount)){revert();}
   }
 
-  function refund(Bidder _bidder) public payable onlyOwner timeout isStopped {
+  function refund(address _addr, uint _amount) public payable onlyOwner timeout isStopped {
+    require(_amount > 0); // having refund amount
+    uint refundAmount = _amount;
+    if(!_addr.send(refundAmount)){revert();}
+  }
+
+  function _refund(Bidder _bidder) private onlyOwner timeout isStopped {
     require(_bidder.amount > 0); // having refund amount
 
     // keep refund amount
@@ -116,5 +126,6 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
 
     if(!_bidder.addr.send(refundAmount)){revert();}
   }
+
 }
 
