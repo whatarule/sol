@@ -11,7 +11,7 @@ contract Owned {
 }
 
 // exercise 10.5
-contract Mortal is Owned{
+contract Mortal is Owned {
   function kill() public onlyOwner {
     selfdestruct(owner);
   }
@@ -41,17 +41,10 @@ contract TimeLimited {
     _status[false] = _closedStatus;
   }
 
-  modifier onGoing() {
-    checkDeadline(); require(_onGoing); _;
-  }
-  modifier timeout() {
-    checkDeadline(); require(!_onGoing); _;
-  }
-
   event status(string _status);
 
   // for checking status properties
-  function checkDeadline() private {
+  function checkDeadline() public {
     if(now >= deadline) { _onGoing = false; }
   }
   function checkStatus() public returns(string) {
@@ -59,6 +52,14 @@ contract TimeLimited {
     emit status(_status[_onGoing]);
     return _status[_onGoing];
   }
+
+  modifier onGoing() {
+    checkDeadline(); require(_onGoing); _;
+  }
+  modifier timeout() {
+    checkDeadline(); require(!_onGoing); _;
+  }
+
 }
 
 
@@ -86,7 +87,6 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
   }
 
   function bid() public payable onGoing isStopped {
-    checkStatus();
     require(msg.value > highestBidder.amount);
 
     // for refunding
@@ -105,26 +105,28 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
   event testUint(uint _test);
   event testAddr(address _test);
 
-  function test() public onlyOwner timeout isStopped {
+  function test() public onlyOwner isStopped {
     uint _refundAmount;
+    Bidder storage _bidder = bidders[0];
 
     // for bidders
-    uint i = 1; while(i < numBidders) {
-      emit testUint(i);
-      Bidder storage _bidder = bidders[i];
-      require(_bidder.amount > 0);    // having refund amount
+    for(uint i = 1; i < numBidders; i++) {
+      _bidder = bidders[i];
       _refundAmount = _bidder.amount; // keep refund amount
       _bidder.amount = 0;             // initialize before refunding
       if(!_bidder.addr.send(_refundAmount)){revert();}
-      i++;
     }
 
     //for owner
     if(!owner.send(highestBidder.amount)){revert();}
   }
 
+  function testE() private {
+    emit testAddr(address(this));
+  }
+
   //function close() public onlyOwner timeout isStopped {
-  function close() public {
+  function close() public onlyOwner isStopped {
     uint _refundAmount;
     // for bidders
     uint i = 1;
