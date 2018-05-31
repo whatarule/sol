@@ -454,3 +454,38 @@
 08:24:19.792994 table@remove removed @104
 08:24:19.793190 table@remove removed @105
 08:24:19.793311 table@remove removed @106
+09:41:25.741464 db@close closing
+09:41:25.741850 db@close done T·392.853µs
+=============== May 31, 2018 (JST) ===============
+10:02:51.128922 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+10:02:51.129145 version@stat F·[0 3] S·5MiB[0B 5MiB] Sc·[0.00 0.05]
+10:02:51.129165 db@open opening
+10:02:51.129231 journal@recovery F·1
+10:02:51.132165 journal@recovery recovering @108
+10:02:51.154192 memdb@flush created L0@113 N·9461 S·528KiB "\x00g}..KhQ,v154833":"\xfe\x82\xaf..\x9d\xff',v154834"
+10:02:51.157271 version@stat F·[1 3] S·6MiB[528KiB 5MiB] Sc·[0.25 0.05]
+10:02:51.158464 db@janitor F·6 G·0
+10:02:51.158500 db@open done T·29.323705ms
+10:04:07.119753 db@close closing
+10:04:07.119928 db@close done T·178.916µs
+=============== May 31, 2018 (JST) ===============
+10:04:18.654360 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+10:04:18.657586 version@stat F·[1 3] S·6MiB[528KiB 5MiB] Sc·[0.25 0.05]
+10:04:18.657614 db@open opening
+10:04:18.657704 journal@recovery F·1
+10:04:18.660815 journal@recovery recovering @114
+10:04:18.661360 memdb@flush created L0@116 N·2 S·240B "Dat..ion,v154848":"Las..der,v154849"
+10:04:18.664324 version@stat F·[2 3] S·6MiB[528KiB 5MiB] Sc·[0.50 0.05]
+10:04:18.665185 db@janitor F·7 G·0
+10:04:18.665230 db@open done T·7.598248ms
+10:05:32.293307 table@compaction L0·2 -> L1·3 S·6MiB Q·154898
+10:05:32.382008 table@build created L1@119 N·46681 S·2MiB "\x00g}..KhQ,v154833":"h\x00\x00..\xc3\xceU,v18349"
+10:05:32.455979 table@build created L1@120 N·26582 S·2MiB "h\x00\x00..\xceUt,v18346":"h\x00\x00..ů\x9b,v137141"
+10:05:32.511208 table@build created L1@121 N·27443 S·1MiB "h\x00\x00..\xaf\x9bt,v137138":"\xff\x93\x85..\x03\xd6\xdf,v24417"
+10:05:32.511285 version@stat F·[0 3] S·5MiB[0B 5MiB] Sc·[0.00 0.06]
+10:05:32.514891 table@compaction committed F-2 S-114KiB Ke·0 D·4188 T·221.513617ms
+10:05:32.515053 table@remove removed @116
+10:05:32.515200 table@remove removed @113
+10:05:32.515524 table@remove removed @110
+10:05:32.515839 table@remove removed @111
+10:05:32.516061 table@remove removed @112

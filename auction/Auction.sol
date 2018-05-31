@@ -105,7 +105,13 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
   event testUint(uint _test);
   event testAddr(address _test);
 
-  function test() public onlyOwner isStopped {
+  function close() public onlyOwner timeout isStopped {
+    if( owner.send(highestBidder.amount ) ){     // for owner
+      for(uint i = 1; i < numBidders; i++) {    // for bidders
+        _refund(i);
+    }}}
+
+  function close() public onlyOwner timeout isStopped {
     uint _refundAmount;
     Bidder storage _bidder = bidders[0];
 
@@ -121,42 +127,10 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
     if(!owner.send(highestBidder.amount)){revert();}
   }
 
-  function testE() private {
-    emit testAddr(address(this));
-  }
-
-  //function close() public onlyOwner timeout isStopped {
-  function close() public onlyOwner isStopped {
-    uint _refundAmount;
-    // for bidders
-    uint i = 1;
-    while(i < numBidders) {
-      emit testUint(i);
-      require(bidders[i].amount > 0); // having refund amount
-
-      // keep refund amount
-      _refundAmount = bidders[i].amount;
-      // initialize before refunding
+  function _refund(uint i) private timeout isStopped {
+    if(bidders[i].addr.send(bidders[i].amount)){
       bidders[i].amount = 0;
-
-      if(!bidders[i].addr.send(_refundAmount)){revert();}
-      i++;
     }
-    //for owner
-    if(!owner.send(highestBidder.amount)){revert();}
-  }
-
-  //function _refund(Bidder _bidder) private timeout isStopped {
-  function _refund(uint i) public {
-    Bidder storage _bidder = bidders[i];
-    require(_bidder.amount > 0); // having refund amount
-
-    // keep refund amount
-    uint refundAmount = _bidder.amount;
-    // initialize before refunding
-    _bidder.amount = 0;
-
-    if(!_bidder.addr.send(refundAmount)){revert();}
   }
 
 }
