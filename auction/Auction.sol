@@ -9,7 +9,7 @@ contract Owned {
 // exercise 10.5
 contract Mortal is Owned {
   event Destructed();
-  function kill() public onlyOwner { emit Destructed(); selfdestruct(owner); }
+  function destruct() public onlyOwner { emit Destructed(); selfdestruct(owner); }
 }
 contract CircuitBreaker is Owned {
   bool public stopped;
@@ -56,38 +56,38 @@ contract Timeout {
 
 contract Auction is Mortal, CircuitBreaker, Timeout {
 
-  // exercise 10.5
-  // keep bidder info for refunding
   struct Bidder {
     address addr;
     uint amount;
     bool refunded;
   }
   Bidder public highestBidder;
-  uint public numBidders;
+
+  // keep bidders' info for refunding
   mapping (uint => Bidder) public bidders;
+  uint public numBidders;
 
+  function setBidderInfo(address _addr, uint _amount) private inTime notStopped {
+    Bidder storage _bidder = bidders[numBidders++];
+    _bidder.addr = _addr;
+    _bidder.amount = _amount;
+    _bidder.refunded = false;
+  }
 
-  function Auction() public Timeout(100, "Bidding...", "Closed") {
-  //function Auction(uint _duration) public Timeout(_duration, "Bidding...", "Closed") {
+  // constructor
+  function Auction(uint _duration) public Timeout(_duration, "Bidding...", "Closed") {
     highestBidder.addr = msg.sender;
     highestBidder.amount = 0;
-
-    // exercise 10.5
-    owner = msg.sender;
     numBidders = 0;
   }
 
   function bid() public payable inTime notStopped {
     require(msg.value > highestBidder.amount);
 
-    // for refunding
-    Bidder storage _bidder = bidders[numBidders++];
-    _bidder.addr = highestBidder.addr;
-    _bidder.amount = highestBidder.amount;
-    _bidder.refunded = false;
+    // keep the current highestBidder's info for refunding
+    setBidderInfo(highestBidder.addr, highestBidder.amount);
 
-    // update
+    // update highestBidder
     highestBidder.addr = msg.sender;
     highestBidder.amount = msg.value;
 
@@ -95,26 +95,20 @@ contract Auction is Mortal, CircuitBreaker, Timeout {
   }
   event Bid(uint _num, address _addr, uint _amount);
 
-
   // onlyOwner
-
-  event Addr(address _addr);
-  event Uint(uint _uint);
-  event Bool(bool _bool);
-
-  function close() public onlyOwner notStopped {
-    if(!owner.send(highestBidder.amount)) revert(); // for owner
-    for(uint i = 1; i < numBidders; i++) {          // for bidders
-      _refund(i);
-    }
+  function close() public onlyOwner outOfTime notStopped {
+    // send back ether to the bidders
+    for(uint i = 1; i < numBidders; i++) { _refund(i); }
     emit Close(highestBidder.addr, highestBidder.amount);
+    // send remains to the owner
+    destruct();
   }
   event Close(address addr, uint amount);
 
-  function _refund(uint i) private onlyOwner notStopped {
+  function _refund(uint i) private onlyOwner outOfTime notStopped {
+    // check not having been refunded yet
     if(!bidders[i].refunded) {
-      //emit Bool(!bidders[i].addr.send(bidders[i].amount));
-      //if(!bidders[i].addr.send(bidders[i].amount)) revert();
+      if(!bidders[i].addr.send(bidders[i].amount)) revert();
       bidders[i].refunded = true;
     }
     emit Refund(i, bidders[i].addr, bidders[i].amount);
