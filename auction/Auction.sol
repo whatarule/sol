@@ -25,30 +25,30 @@ contract CircuitBreaker is Owned {
 
 contract Timeout {
   uint public deadline;// UnixTime
-  bool private _timeout;
   mapping (bool => string) private _status;
 
   function Timeout(uint _duration, string _inTimeStatus, string _outOfTimeStatus) public {
     deadline = now + _duration;
     _status[false] = _inTimeStatus;
     _status[true] = _outOfTimeStatus;
-    _timeout = false;
   }
 
+  // just check the status
+  function _timeout() private view returns(bool) {
+    return now >= deadline;
+  }
+
+  // show the status on the event
+  function status() public {
+    emit Status(_status[_timeout()]);
+  }
   event Status(string status);
 
-  function checkDeadline() private {// just check the status
-    if(now >= deadline) _timeout = true;
-  }
-  function status() public {// show the status on the event
-    checkDeadline(); emit Status(_status[_timeout]);
-  }
-
   modifier inTime() {
-    checkDeadline(); if(_timeout) revert(); else _;
+    require(!_timeout()); _;
   }
   modifier outOfTime() {
-    checkDeadline(); if(!_timeout) revert(); else _;
+    require(_timeout()); _;
   }
 
 }
@@ -105,14 +105,14 @@ contract Auction is Mortal, CircuitBreaker, Timeout {
   }
   event Close(address addr, uint amount);
 
-  function _refund(uint i) private onlyOwner outOfTime notStopped {
+  function _refund(uint i) private onlyOwner notStopped {
     // check not having been refunded yet
     if(!bidders[i].refunded) {
-      if(!bidders[i].addr.send(bidders[i].amount)) revert();
+      bidders[i].addr.transfer(bidders[i].amount);
       bidders[i].refunded = true;
     }
     emit Refund(i, bidders[i].addr, bidders[i].amount);
   }
-  event Refund(uint i, address addr, uint amount);
+  event Refund(uint num, address addr, uint amount);
 }
 
