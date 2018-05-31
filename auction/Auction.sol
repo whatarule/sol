@@ -2,82 +2,74 @@ pragma solidity ^0.4.11;
 
 contract Owned {
   address public owner;
-  function Owned() public {
-    owner = msg.sender;
-  }
-  modifier onlyOwner {
-    require(msg.sender == owner); _;
-  }
+  function Owned() public { owner = msg.sender; }
+  modifier onlyOwner { require(msg.sender == owner); _; }
 }
 
 // exercise 10.5
 contract Mortal is Owned {
-  function kill() public onlyOwner {
-    selfdestruct(owner);
-  }
+  event Destructed();
+  function kill() public onlyOwner { emit Destructed(); selfdestruct(owner); }
 }
 contract CircuitBreaker is Owned {
   bool public stopped;
-  function CircuitBreaker() public {
-    stopped = false;
-  }
-  modifier isStopped() {
-    require(!stopped); _;
+  event Stopped(bool stopped);
+  function CircuitBreaker() public { stopped = false; }
+  modifier notStopped() {
+    if(stopped) revert(); else _;
   }
   function toggleCircuit(bool _stopped) public onlyOwner {
-    stopped = _stopped;
+    stopped = _stopped; emit Stopped(stopped);
   }
 }
 
-contract TimeLimited {
-  uint public deadline; // UnixTime
-  bool private _onGoing;
+contract Timeout {
+  uint public deadline;// UnixTime
+  bool private _timeout;
   mapping (bool => string) private _status;
 
-  function TimeLimited(uint _duration, string _onGoingStatus, string _closedStatus) public {
+  function Timeout(uint _duration, string _inTimeStatus, string _outOfTimeStatus) public {
     deadline = now + _duration;
-    _onGoing = true;
-    _status[true] = _onGoingStatus;
-    _status[false] = _closedStatus;
+    _status[false] = _inTimeStatus;
+    _status[true] = _outOfTimeStatus;
+    _timeout = false;
   }
 
-  event status(string _status);
+  event Status(string status);
 
-  // for checking status properties
-  function checkDeadline() public {
-    if(now >= deadline) { _onGoing = false; }
+  function checkDeadline() private {// just check the status
+    if(now >= deadline) _timeout = true;
   }
-  function checkStatus() public returns(string) {
-    checkDeadline();
-    emit status(_status[_onGoing]);
-    return _status[_onGoing];
+  function status() public {// show the status on the event
+    checkDeadline(); emit Status(_status[_timeout]);
   }
 
-  modifier onGoing() {
-    checkDeadline(); require(_onGoing); _;
+  modifier inTime() {
+    checkDeadline(); if(_timeout) revert(); else _;
   }
-  modifier timeout() {
-    checkDeadline(); require(!_onGoing); _;
+  modifier outOfTime() {
+    checkDeadline(); if(!_timeout) revert(); else _;
   }
 
 }
 
 
-contract Auction is Mortal, CircuitBreaker, TimeLimited {
+contract Auction is Mortal, CircuitBreaker, Timeout {
 
   // exercise 10.5
   // keep bidder info for refunding
   struct Bidder {
     address addr;
     uint amount;
+    bool refunded;
   }
   Bidder public highestBidder;
   uint public numBidders;
   mapping (uint => Bidder) public bidders;
 
 
-  //function Auction(uint _duration) payable public TimeLimited(_duration, "Bidding...", "Closed") {
-  function Auction() payable public TimeLimited(200, "Bidding...", "Closed") {
+  function Auction() public Timeout(100, "Bidding...", "Closed") {
+  //function Auction(uint _duration) public Timeout(_duration, "Bidding...", "Closed") {
     highestBidder.addr = msg.sender;
     highestBidder.amount = 0;
 
@@ -86,52 +78,47 @@ contract Auction is Mortal, CircuitBreaker, TimeLimited {
     numBidders = 0;
   }
 
-  function bid() public payable onGoing isStopped {
+  function bid() public payable inTime notStopped {
     require(msg.value > highestBidder.amount);
 
     // for refunding
     Bidder storage _bidder = bidders[numBidders++];
     _bidder.addr = highestBidder.addr;
     _bidder.amount = highestBidder.amount;
+    _bidder.refunded = false;
 
     // update
     highestBidder.addr = msg.sender;
     highestBidder.amount = msg.value;
+
+    emit Bid(numBidders, highestBidder.addr, highestBidder.amount);
   }
+  event Bid(uint _num, address _addr, uint _amount);
 
 
   // onlyOwner
 
-  event testUint(uint _test);
-  event testAddr(address _test);
+  event Addr(address _addr);
+  event Uint(uint _uint);
+  event Bool(bool _bool);
 
-  function close() public onlyOwner timeout isStopped {
-    if( owner.send(highestBidder.amount ) ){     // for owner
-      for(uint i = 1; i < numBidders; i++) {    // for bidders
-        _refund(i);
-    }}}
-
-  function close() public onlyOwner timeout isStopped {
-    uint _refundAmount;
-    Bidder storage _bidder = bidders[0];
-
-    // for bidders
-    for(uint i = 1; i < numBidders; i++) {
-      _bidder = bidders[i];
-      _refundAmount = _bidder.amount; // keep refund amount
-      _bidder.amount = 0;             // initialize before refunding
-      if(!_bidder.addr.send(_refundAmount)){revert();}
+  function close() public onlyOwner notStopped {
+    if(!owner.send(highestBidder.amount)) revert(); // for owner
+    for(uint i = 1; i < numBidders; i++) {          // for bidders
+      _refund(i);
     }
-
-    //for owner
-    if(!owner.send(highestBidder.amount)){revert();}
+    emit Close(highestBidder.addr, highestBidder.amount);
   }
+  event Close(address addr, uint amount);
 
-  function _refund(uint i) private timeout isStopped {
-    if(bidders[i].addr.send(bidders[i].amount)){
-      bidders[i].amount = 0;
+  function _refund(uint i) private onlyOwner notStopped {
+    if(!bidders[i].refunded) {
+      //emit Bool(!bidders[i].addr.send(bidders[i].amount));
+      //if(!bidders[i].addr.send(bidders[i].amount)) revert();
+      bidders[i].refunded = true;
     }
+    emit Refund(i, bidders[i].addr, bidders[i].amount);
   }
-
+  event Refund(uint i, address addr, uint amount);
 }
 
