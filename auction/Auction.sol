@@ -14,13 +14,15 @@ contract Mortal is Owned {
 contract CircuitBreaker is Owned {
   bool public stopped;
   event Stopped(bool stopped);
-  function CircuitBreaker() public { stopped = false; }
+  function CircuitBreaker() internal { stopped = false; }
   modifier notStopped() {
-    if(stopped) revert(); else _;
+    if(!stopped) _;
+    else { require(msg.value == 0); emit Stopped(stopped); }
   }
   function toggleCircuit(bool _stopped) public onlyOwner {
-    stopped = _stopped; emit Stopped(stopped);
+    stopped = _stopped; emit Toggled(stopped);
   }
+  event Toggled(bool stopped);
 }
 
 contract Timeout {
@@ -34,21 +36,25 @@ contract Timeout {
   }
 
   // just check the status
-  function _timeout() private view returns(bool) {
+  function _isTimeout() private view returns(bool) {
     return now >= deadline;
   }
 
   // show the status on the event
   function status() public {
-    emit Status(_status[_timeout()]);
+    emit Status(_status[_isTimeout()]);
   }
   event Status(string status);
 
-  modifier inTime() {
-    require(!_timeout()); _;
+  modifier timeout(bool _bool) {
+    bool _timeout = _isTimeout();
+    if(_timeout == _bool) _;
+    else { require(msg.value == 0); emit Status(_status[_timeout]); }
   }
   modifier outOfTime() {
-    require(_timeout()); _;
+    bool _timeout = _isTimeout();
+    if(_timeout) _;
+    else { require(msg.value == 0); emit Status(_status[_timeout]); }
   }
 
 }
@@ -56,18 +62,17 @@ contract Timeout {
 
 contract Auction is Mortal, CircuitBreaker, Timeout {
 
+  // keep bidders' info for refunding
   struct Bidder {
     address addr;
     uint amount;
     bool refunded;
   }
   Bidder public highestBidder;
-
-  // keep bidders' info for refunding
   mapping (uint => Bidder) public bidders;
   uint public numBidders;
 
-  function setBidderInfo(address _addr, uint _amount) private inTime notStopped {
+  function setBidderInfo(address _addr, uint _amount) private timeout(false) notStopped {
     Bidder storage _bidder = bidders[numBidders++];
     _bidder.addr = _addr;
     _bidder.amount = _amount;
@@ -81,7 +86,7 @@ contract Auction is Mortal, CircuitBreaker, Timeout {
     numBidders = 0;
   }
 
-  function bid() public payable inTime notStopped {
+  function bid() public payable timeout(false) notStopped {
     require(msg.value > highestBidder.amount);
 
     // keep the current highestBidder's info for refunding
@@ -93,7 +98,7 @@ contract Auction is Mortal, CircuitBreaker, Timeout {
 
     emit Bid(numBidders, highestBidder.addr, highestBidder.amount);
   }
-  event Bid(uint _num, address _addr, uint _amount);
+  event Bid(uint num, address addr, uint amount);
 
   // onlyOwner
   function close() public onlyOwner outOfTime notStopped {
