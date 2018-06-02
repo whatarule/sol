@@ -122,8 +122,8 @@ contract Auction is Mortal, CircuitBreaker, Timeout {
   function _refund(uint i) private onlyOwner notStopped {
     // check not having been refunded yet
     if(!bidders[i].refunded) {
-      bidders[i].addr.transfer(bidders[i].amount);
       bidders[i].refunded = true;
+      bidders[i].addr.transfer(bidders[i].amount);
     }
     emit Refund(i, bidders[i].addr, bidders[i].amount);
   }

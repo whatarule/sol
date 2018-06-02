@@ -1,5 +1,6 @@
 pragma solidity ^0.4.11;
 
+// Utility Contracts
 contract Owned {
   address private _owner;
   function Owned() internal { _owner = msg.sender; }
@@ -19,12 +20,12 @@ contract Mortal is Owned {
 }
 contract CircuitBreaker is Owned, Paid {
   bool private _stopped;
-  event Stopped(bool _stopped);
   function CircuitBreaker() internal { _stopped = false; }
-  modifier not_stopped() {
+  modifier notStopped() {
     if(!_stopped) _;
     else { require(!_paid()); emit Stopped(_stopped); }
   }
+  event Stopped(bool _stopped);
   function toggleCircuit(bool _bool) public onlyOwner {
     _stopped = _bool; emit Toggled(_stopped);
   }
@@ -32,7 +33,10 @@ contract CircuitBreaker is Owned, Paid {
   function stopped() external view returns(bool) { return _stopped; }
 }
 
+
 // exercise 11.3
+
+// for Lottery status
 contract Ongoing is Owned, Paid {
   bool private _ongoing;
   mapping(bool => string) internal _status;
@@ -42,44 +46,53 @@ contract Ongoing is Owned, Paid {
     _status[false] = _offStatus;
   }
 
-  function status() public { emit Status(_status[_ongoing]); }
-  event Status(string _status);
-  function changeStatus(bool _bool) internal onlyOwner {
-    _ongoing = _bool;
+  function status() public view returns(string) {
+    return _status[_ongoing];
   }
+  event Status(string _status);
 
+  function toggleOngoing(bool _bool) internal onlyOwner {
+    _ongoing = _bool; emit Status(status());
+  }
   modifier ongoing() {
-    if(_ongoing) _; else { require(!_paid()); status(); }
+    if(_ongoing) _; else { require(!_paid()); emit Status(status()); }
   }
 }
 contract MinimumRequired {
   modifier minimumRequired(uint _numMinimum, uint _num) {
-    require(_num >= _numMinimum); _;
+    if(_num < _numMinimum) emit Required(_num, _numMinimum); else _;
   }
+  event Required(uint num, uint min);
 }
 
-contract Lottery is Ongoing("Accepting...", "Closed"), MinimumRequired, Mortal, CircuitBreaker {
+// Main Contract
+contract Lottery is Ongoing, MinimumRequired, Mortal, CircuitBreaker {
 
   mapping (uint => address) public applicants;
   uint public numApplicants;
   address public winnerAddress;
   uint public winnerId;
 
-  function Lottery() public {
+  function Lottery() public Ongoing("Accepting...", "Closed") {
     numApplicants = 0;
   }
 
   function enter() external ongoing {
-    for(uint i = 1; i < numApplicants+1; i++) {
+    for(uint i = 1; i <= numApplicants; i++) {
       require(applicants[i] != msg.sender);
     }
-    applicants[numApplicants++] = msg.sender;
+    numApplicants++;
+    applicants[numApplicants] = msg.sender;
+    emit Enter(numApplicants, msg.sender);
   }
+  event Enter(uint num, address addr);
 
-  function hold() external minimumRequired(3, numApplicants) {
+  function hold() external minimumRequired(3, numApplicants) ongoing {
+    toggleOngoing(false);
     winnerId = block.timestamp % numApplicants + 1;
     winnerAddress = applicants[winnerId];
-    changeStatus(false);
+    emit Winner(winnerId, winnerAddress);
   }
+  event Winner(uint id, address addr);
 
 }
