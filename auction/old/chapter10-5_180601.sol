@@ -5,8 +5,14 @@ contract Owned {
         function Owned() internal { owner = msg.sender; }
         modifier onlyOwner { require(msg.sender == owner); _; }
 }
+
 contract Paid {
-        bool internal _paid = msg.value > 0;
+// for error hadling:
+// paid() -> revert and send back ether
+// !paid() -> error log on event
+        function _paid() internal view returns(bool) {
+                return msg.value > 0;
+        }
 }
 
 // exercise 10.5
@@ -14,13 +20,13 @@ contract Mortal is Owned {
         event Destructed();
         function destruct() public onlyOwner { emit Destructed(); selfdestruct(owner); }
 }
-contract CircuitBreaker is Owned {
+contract CircuitBreaker is Owned, Paid {
         bool public stopped;
         event Stopped(bool stopped);
         function CircuitBreaker() internal { stopped = false; }
         modifier notStopped() {
                 if(!stopped) _;
-                else { require(msg.value == 0); emit Stopped(stopped); }
+                else { require(!_paid()); emit Stopped(stopped); }
         }
         function toggleCircuit(bool _stopped) public onlyOwner {
                 stopped = _stopped; emit Toggled(stopped);
@@ -28,7 +34,7 @@ contract CircuitBreaker is Owned {
         event Toggled(bool stopped);
 }
 
-contract Timeout {
+contract Timeout is Paid {
         uint public deadline;// UnixTime
         mapping (bool => string) private _status;
 
@@ -52,12 +58,12 @@ contract Timeout {
         modifier timeout(bool _bool) {
                 bool _timeout = _isTimeout();
                 if(_timeout == _bool) _;
-                else { require(msg.value == 0); emit Status(_status[_timeout]); }
+                else { require(!_paid()); emit Status(_status[_timeout]); }
         }
         modifier outOfTime() {
                 bool _timeout = _isTimeout();
                 if(_timeout) _;
-                else { require(msg.value == 0); emit Status(_status[_timeout]); }
+                else { require(!_paid()); emit Status(_status[_timeout]); }
         }
 
 }
