@@ -1,0 +1,25 @@
+INFO [06-04|14:12:55] Maximum peer count                       ETH=25 LES=0 total=25
+INFO [06-04|14:12:55] Starting peer-to-peer node               instance=Geth/v1.8.8-stable/darwin-amd64/go1.10.2
+INFO [06-04|14:12:55] Allocated cache and file handles         database=/Users/wk/wk/code/sol/geth/eth_private_net/geth/chaindata cache=768 handles=128
+INFO [06-04|14:12:55] Initialised chain configuration          config="{ChainID: 15 Homestead: 0 DAO: <nil> DAOSupport: false EIP150: <nil> EIP155: 0 EIP158: 0 Byzantium: <nil> Constantinople: <nil> Engine: unknown}"
+INFO [06-04|14:12:55] Disk storage enabled for ethash caches   dir=/Users/wk/wk/code/sol/geth/eth_private_net/geth/ethash count=3
+INFO [06-04|14:12:55] Disk storage enabled for ethash DAGs     dir=/Users/wk/.ethash                                      count=2
+INFO [06-04|14:12:55] Initialising Ethereum protocol           versions="[63 62]" network=10
+INFO [06-04|14:12:55] Loaded most recent local header          number=0 hash=76d747…1a5e65 td=0
+INFO [06-04|14:12:55] Loaded most recent local full block      number=0 hash=76d747…1a5e65 td=0
+INFO [06-04|14:12:55] Loaded most recent local fast block      number=0 hash=76d747…1a5e65 td=0
+INFO [06-04|14:12:55] Loaded local transaction journal         transactions=0 dropped=0
+INFO [06-04|14:12:55] Regenerated local transaction journal    transactions=0 accounts=0
+INFO [06-04|14:12:55] Starting P2P networking 
+INFO [06-04|14:12:55] RLPx listener up                         self="enode://71f12326b72364c0c68e0885edb4cf985617c6a13e2d999d124dd55360b0877058671fdb625bd1d33ada6b7399e4dd0be09406f9eda710d3594bb4b2e858ccbc@[::]:30303?discport=0"
+INFO [06-04|14:12:55] IPC endpoint opened                      url=/Users/wk/wk/code/sol/geth/eth_private_net/geth.ipc
+INFO [06-04|14:12:55] HTTP endpoint opened                     url=http://localhost:7545                               cors=* vhosts=localhost
+INFO [06-04|14:12:55] Etherbase automatically configured       address=0xE8253da623F415EB797D70087C080ECa5D4cCD33
+INFO [06-04|14:12:57] Mapped network port                      proto=tcp extport=30303 intport=30303 interface="UPNP IGDv1-IP1"
+INFO [06-04|14:13:15] HTTP endpoint closed                     url=http://localhost:7545
+INFO [06-04|14:13:15] IPC endpoint closed                      endpoint=/Users/wk/wk/code/sol/geth/eth_private_net/geth.ipc
+INFO [06-04|14:13:15] Blockchain manager stopped 
+INFO [06-04|14:13:15] Stopping Ethereum protocol 
+INFO [06-04|14:13:15] Ethereum protocol stopped 
+INFO [06-04|14:13:15] Transaction pool stopped 
+INFO [06-04|14:13:15] Database closed                          database=/Users/wk/wk/code/sol/geth/eth_private_net/geth/chaindata

@@ -60,7 +60,7 @@ contract Ongoing is Owned, Paid {
 }
 contract MinimumRequired is Paid {
   modifier minimumRequired(uint _min, uint _num) {
-    if(_num < _min) { reauire(!paid()); emit Required(_num, _min); } else _;
+    if(_num < _min) { require(!_paid()); emit Required(_num, _min); } else _;
   }
   event Required(uint num, uint min);
 }
