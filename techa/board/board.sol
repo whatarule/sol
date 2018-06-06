@@ -85,7 +85,7 @@ contract Board is Mortal, CircuitBreaker, Limited {
 
   modifier unregistered() {
     User storage _u = users[msg.sender];
-    if(_u.num == 0) { require(!_paid()); emit Registered(_u.num, _u.name, msg.sender); } else _;
+    if(_u.num != 0) { require(!_paid()); emit Registered(_u.num, _u.name, msg.sender); } else _;
   }
   function register(string _name) external unregistered {
     numUsers++;
@@ -96,19 +96,22 @@ contract Board is Mortal, CircuitBreaker, Limited {
 
   modifier registered() {
     User storage _u = users[msg.sender];
-    if(bytes(_u.name).length != 0) { require(!_paid()); emit Unregistered(msg.sender); } else _;
+    if(_u.num == 0) { require(!_paid()); emit Unregistered(msg.sender); } else _;
   }
-  function submit(string _content) external registered notBlank("content", _content) limited(1000, numMessages) {
+  function submit(string _content) public registered notBlank("content", _content) limited(1000, numMessages) {
     numMessages++;
-     Message storage _mssg = messages[numMessages];
-       _mssg.content = _content;
-       _mssg.addr = msg.sender;
+    messages[numMessages] = Message({content: _content, addr: msg.sender});
     emit Submit(numMessages, _content, "name");
   }
   event Unregistered(address addr);
   event Submit(uint num, string content, string name);
 
-  function reply() external pure {}
+  function reply(uint _num, string _content) payable external notBlank("to", messages[_num].content) {
+    submit(_content);
+    messages[_num].addr.transfer(msg.value);
+    emit Fund(_num, msg.value);
+  }
+  event Fund(uint num, uint value);
 }
 
 
