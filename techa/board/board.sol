@@ -59,7 +59,7 @@ contract Board is Mortal, CircuitBreaker, Limited {
   struct User{
     uint num;
     string name;
-    //string email;
+    string email;
   }
   mapping(address => User) public users;
   struct Message {
@@ -71,26 +71,22 @@ contract Board is Mortal, CircuitBreaker, Limited {
   modifier notBlank(string _name, string _str) {
     if(bytes(_str).length == 0) { require(!_paid()); emit Blank(_name); } else _;
   }
+  function defaultValue(string _var, string _default) private returns(string) {
+    if(bytes(_var).length == 0) { emit Blank(_default); return _default; }
+    else return _var;
+  }
   event Blank(string name);
-  modifier defaultValue(string _var, string _default) {
-    if(bytes(_var).length == 0) { _var = _default; } _;
-  }
-
-  function test() external {
-    string memory _name = "name";
-    numUsers++;
-    users[msg.sender] = User({num: numUsers, name: _name});
-    emit Registered(numUsers, _name, msg.sender);
-  }
 
   modifier unregistered() {
     User storage _u = users[msg.sender];
     if(_u.num != 0) { require(!_paid()); emit Registered(_u.num, _u.name, msg.sender); } else _;
   }
-  function register(string _name) external unregistered {
+  function register(string _name, string _email) external unregistered {
     numUsers++;
-    users[msg.sender] = User({num: numUsers, name: _name});
-    emit Registered(numUsers, _name, msg.sender);
+    User storage _u = users[msg.sender];
+      _u.num = numUsers; _u.name = defaultValue(_name, "(no name)");
+      _email;//_u.email = "email";
+    emit Registered(numUsers, users[msg.sender].name, msg.sender);
   }
   event Registered(uint num, string name, address addr);
 
