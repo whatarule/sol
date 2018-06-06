@@ -54,19 +54,14 @@ contract Board is Mortal, CircuitBreaker, Limited {
     nameBoard = "test";
     numMessages = 0;
     numUsers = 0;
-    _msg.sender = msg.sender;
   }
 
   struct User{
-    uint id;
-    address addr;
+    uint num;
     string name;
-    string email;
+    //string email;
   }
-  mapping(uint => User) public users;
-  mapping(uint => address) public addresses;
-  //mapping(address => User) public toUser;
-  //mapping(address => uint) public toID;
+  mapping(address => User) public users;
   struct Message {
     string content;
     address addr;
@@ -81,41 +76,27 @@ contract Board is Mortal, CircuitBreaker, Limited {
     if(bytes(_var).length == 0) { _var = _default; } _;
   }
 
-  struct Msg { address sender; }
-  Msg public _msg;
-  function test() public {
-    //_msg.sender = msg.sender;
-    for(uint i = 1; i <= numUsers; i++) {
-      require(users[i].addr != msg.sender);
-    }
+  function test() external {
+    string memory _name = "name";
     numUsers++;
-    addresses[numUsers] = msg.sender;
-    User storage _user = users[numUsers];
-      _user.name = "name"; _user.email = "email";
-      //_user.addr = _msg.sender;
-    emit Registered(numUsers, "name", msg.sender);
+    users[msg.sender] = User({num: numUsers, name: _name});
+    emit Registered(numUsers, _name, msg.sender);
   }
 
-  function register(string _name, string _email) external {
-    for(uint i = 1; i <= numUsers; i++) {
-      require(users[i].addr != msg.sender);
-    }
-    address _sender = msg.sender;
+  modifier unregistered() {
+    User storage _u = users[msg.sender];
+    if(_u.num == 0) { require(!_paid()); emit Registered(_u.num, _u.name, msg.sender); } else _;
+  }
+  function register(string _name) external unregistered {
     numUsers++;
-    User storage _user = users[numUsers];
-      _user.id = numUsers;
-      _user.addr = _sender;
-      _user.name = _name; _user.email = _email;
-    //User storage _toUser = toUser[_sender]; _toUser;
-      //_toUser.id = numUsers;
-    emit Registered(numUsers, _name, _sender);
+    users[msg.sender] = User({num: numUsers, name: _name});
+    emit Registered(numUsers, _name, msg.sender);
   }
   event Registered(uint num, string name, address addr);
 
   modifier registered() {
-    for(uint i = 1; i <= numUsers; i++) {
-      if(users[i].addr == msg.sender) _;
-    }
+    User storage _u = users[msg.sender];
+    if(bytes(_u.name).length != 0) { require(!_paid()); emit Unregistered(msg.sender); } else _;
   }
   function submit(string _content) external registered notBlank("content", _content) limited(1000, numMessages) {
     numMessages++;
@@ -124,6 +105,7 @@ contract Board is Mortal, CircuitBreaker, Limited {
        _mssg.addr = msg.sender;
     emit Submit(numMessages, _content, "name");
   }
+  event Unregistered(address addr);
   event Submit(uint num, string content, string name);
 
   function reply() external pure {}

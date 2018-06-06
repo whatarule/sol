@@ -14,12 +14,12 @@ contract Mortal is Owned {
 contract TestContract is Mortal {
   struct Msg { address sender; }
   struct Struct {
-    address addr;
+    string name;
   }
   uint public numStruct;
-  mapping (uint => Struct) public structs;
+  mapping (uint => string) public toStr;
   mapping (uint => address) public toAddr;
-  mapping (uint => uint) public toUint;
+  mapping (address => Struct) public structs;
   Msg public _msg;
   function TestContract() public {
     numStruct = 0;
@@ -27,9 +27,9 @@ contract TestContract is Mortal {
   function test() public {
     _msg.sender = msg.sender;
     numStruct++;
-    //toAddr[numStruct] = _msg.sender;
-    Struct storage _st = structs[numStruct];
-      _st.addr = msg.sender;
+    //toStr[1] = "aaa";
+    //toAddr[1] = _msg.sender;
+    structs[msg.sender] = Struct({name: "name"});
     emit Test(_msg.sender);
   }
   event Test(address sender);
