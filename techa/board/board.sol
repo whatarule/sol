@@ -48,10 +48,8 @@ contract Board is Mortal, CircuitBreaker, Limited {
   string public nameBoard;
   uint public numUsers;
   uint public numMessages;
-  function Board() public {
-  //function Board(string _name) public {
-  //  nameBoard = _name;
-    nameBoard = "test";
+  function Board(string _name) public {
+    nameBoard = _name;
     numMessages = 0;
     numUsers = 0;
   }
@@ -59,7 +57,8 @@ contract Board is Mortal, CircuitBreaker, Limited {
   struct User{
     uint num;
     string name;
-    string email;
+    string email;// unused: revert on substitution
+    // because of having the same type to the other item, in this case, "string"
   }
   mapping(address => User) public users;
   struct Message {
@@ -85,7 +84,7 @@ contract Board is Mortal, CircuitBreaker, Limited {
     numUsers++;
     User storage _u = users[msg.sender];
       _u.num = numUsers; _u.name = defaultValue(_name, "(no name)");
-      _email;//_u.email = "email";
+      _email;//_u.email = "email";// error
     emit Registered(numUsers, users[msg.sender].name, msg.sender);
   }
   event Registered(uint num, string name, address addr);
@@ -97,17 +96,20 @@ contract Board is Mortal, CircuitBreaker, Limited {
   function submit(string _content) public registered notBlank("content", _content) limited(1000, numMessages) {
     numMessages++;
     messages[numMessages] = Message({content: _content, addr: msg.sender});
-    emit Submit(numMessages, _content, "name");
+    emit Submit(numMessages, _content, users[msg.sender].name);
   }
   event Unregistered(address addr);
   event Submit(uint num, string content, string name);
 
-  function reply(uint _num, string _content) payable external notBlank("to", messages[_num].content) {
+  function reply(uint _numMssg, string _content) payable external registered notBlank("to", messages[_numMssg].content) limited(1000, numMessages) {
     submit(_content);
-    messages[_num].addr.transfer(msg.value);
-    emit Fund(_num, msg.value);
+    address _to = messages[_numMssg].addr;
+    if(msg.value != 0) {
+      _to.transfer(msg.value);
+      emit Fund(users[_to].num, msg.value, users[msg.sender].num);
+    }
   }
-  event Fund(uint num, uint value);
+  event Fund(uint to, uint value, uint from);
 }
 
 
